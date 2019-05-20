@@ -4509,6 +4509,91 @@ UniValue z_sendmany(const UniValue& params, bool fHelp)
     return operationId;
 }
 
+UniValue z_createrawtransaction(const UniValue& params, bool fHelp)
+{
+    if (!EnsureWalletIsAvailable(fHelp))
+        return NullUniValue;
+
+    if (fHelp || params.size() < 2 || params.size() > 4)
+        throw runtime_error(
+            "z_createrawtransaction ...\n"
+            "\nCreate a raw shielded transaction, involving at least one shielded input or output. Amounts are decimal numbers with at most 8 digits of precision."
+        );
+
+    LOCK2(cs_main, pwalletMain->cs_wallet);
+    UniValue inputs = params[0].get_array();
+    UniValue outputs = params[1].get_array();
+
+    if (outputs.size()==0)
+        throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid parameter, amounts array is empty.");
+
+    for (const UniValue& o : outputs.getValues()) {
+        if (!o.isObject())
+            throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid parameter, expected object");
+
+        // sanity check, report error if unknown key-value pairs
+        for (const string& name_ : o.getKeys()) {
+            std::string s = name_;
+            if (s != "address" && s != "amount" && s!="memo")
+                throw JSONRPCError(RPC_INVALID_PARAMETER, string("Invalid parameter, unknown key: ")+s);
+        }
+
+        string address = find_value(o, "address").get_str();
+        bool isZaddr = false;
+        CTxDestination taddr = DecodeDestination(address);
+        if (!IsValidDestination(taddr)) {
+            auto res = DecodePaymentAddress(address);
+            if (IsValidPaymentAddress(res, branchId)) {
+                isZaddr = true;
+
+                bool toSapling = boost::get<libzcash::SaplingPaymentAddress>(&res) != nullptr;
+                bool toSprout  = !toSapling;
+                noSproutAddrs  = noSproutAddrs && toSapling;
+                containsSproutOutput  |= toSprout;
+                containsSaplingOutput |= toSapling;
+
+                if ( GetTime() > KOMODO_SAPLING_DEADLINE )
+                {
+                    if ( fromSprout || toSprout )
+                        throw JSONRPCError(RPC_INVALID_PARAMETER,"Sprout usage has expired");
+                }
+                }
+            } else {
+                throw JSONRPCError(RPC_INVALID_PARAMETER, string("Invalid parameter, unknown address format: ")+address );
+            }
+        }
+
+        setAddress.insert(address);
+
+        UniValue memoValue = find_value(o, "memo");
+        string memo;
+        if (!memoValue.isNull()) {
+            memo = memoValue.get_str();
+            if (!isZaddr) {
+                throw JSONRPCError(RPC_INVALID_PARAMETER, "Memo cannot be used with a taddr.  It can only be used with a zaddr.");
+            } else if (!IsHex(memo)) {
+                throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid parameter, expected memo data in hexadecimal format.");
+            }
+            if (memo.length() > ZC_MEMO_SIZE*2) {
+                throw JSONRPCError(RPC_INVALID_PARAMETER,  strprintf("Invalid parameter, size of memo is larger than maximum allowed %d", ZC_MEMO_SIZE ));
+            }
+        }
+
+        UniValue av = find_value(o, "amount");
+        CAmount nAmount = AmountFromValue( av );
+        if (nAmount < 0)
+            throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid parameter, amount must be positive");
+
+        if (isZaddr) {
+            zaddrRecipients.push_back( SendManyRecipient(address, nAmount, memo) );
+        } else {
+            taddrRecipients.push_back( SendManyRecipient(address, nAmount, memo) );
+        }
+
+        nTotalOut += nAmount;
+    }
+}
+
 
 /**
 When estimating the number of coinbase utxos we can shield in a single transaction:
