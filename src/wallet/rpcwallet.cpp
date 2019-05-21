@@ -4521,8 +4521,11 @@ UniValue z_createrawtransaction(const UniValue& params, bool fHelp)
         );
 
     LOCK2(cs_main, pwalletMain->cs_wallet);
-    UniValue inputs = params[0].get_array();
-    UniValue outputs = params[1].get_array();
+    UniValue inputs   = params[0].get_array();
+    UniValue outputs  = params[1].get_array();
+    bool fromTaddr    = false;
+    bool fromSapling  = false;
+    uint32_t branchId = CurrentEpochBranchId(chainActive.Height(), Params().GetConsensus());
 
     if (inputs.size()==0)
         throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid parameter, inputs array is empty.");
@@ -4544,6 +4547,7 @@ UniValue z_createrawtransaction(const UniValue& params, bool fHelp)
 
         string address = find_value(o, "address").get_str();
         bool isZaddr = false;
+
         CTxDestination taddr = DecodeDestination(address);
         if (!IsValidDestination(taddr)) {
             auto res = DecodePaymentAddress(address);
