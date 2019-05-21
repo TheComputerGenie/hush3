@@ -4524,8 +4524,12 @@ UniValue z_createrawtransaction(const UniValue& params, bool fHelp)
     UniValue inputs = params[0].get_array();
     UniValue outputs = params[1].get_array();
 
+    if (inputs.size()==0)
+        throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid parameter, inputs array is empty.");
+    // TODO: process inputs and add to tx
+
     if (outputs.size()==0)
-        throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid parameter, amounts array is empty.");
+        throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid parameter, outputs array is empty.");
 
     for (const UniValue& o : outputs.getValues()) {
         if (!o.isObject())
@@ -4556,7 +4560,6 @@ UniValue z_createrawtransaction(const UniValue& params, bool fHelp)
                 {
                     if ( fromSprout || toSprout )
                         throw JSONRPCError(RPC_INVALID_PARAMETER,"Sprout usage has expired");
-                }
                 }
             } else {
                 throw JSONRPCError(RPC_INVALID_PARAMETER, string("Invalid parameter, unknown address format: ")+address );
@@ -4592,6 +4595,46 @@ UniValue z_createrawtransaction(const UniValue& params, bool fHelp)
 
         nTotalOut += nAmount;
     }
+
+    CMutableTransaction mtx;
+    mtx.fOverwintered        = true;
+    mtx.nVersionGroupId      = SAPLING_VERSION_GROUP_ID;
+    mtx.nVersion             = SAPLING_TX_VERSION;
+    unsigned int max_tx_size = MAX_TX_SIZE_AFTER_SAPLING;
+    size_t txsize = 0;
+    for (int i = 0; i < zaddrRecipients.size(); i++) {
+        auto address   = std::get<0>(zaddrRecipients[i]);
+        auto res       = DecodePaymentAddress(address);
+        bool toSapling = boost::get<libzcash::SaplingPaymentAddress>(&res) != nullptr;
+        if (toSapling) {
+            mtx.vShieldedOutput.push_back(OutputDescription());
+        }
+    }
+    CTransaction tx(mtx);
+    txsize += GetSerializeSize(tx, SER_NETWORK, tx.nVersion);
+    if (fromTaddr) {
+        txsize += CTXIN_SPEND_DUST_SIZE;
+        txsize += CTXOUT_REGULAR_SIZE;      // There will probably be taddr change
+    }
+    txsize += CTXOUT_REGULAR_SIZE * taddrRecipients.size();
+    if (txsize > max_tx_size) {
+        throw JSONRPCError(RPC_INVALID_PARAMETER, strprintf("Too many outputs, size of raw transaction would be larger than limit of %d bytes", max_tx_size ));
+    }
+
+    // Minimum confirmations
+    int nMinDepth = 1;
+    if (params.size() > 2) {
+        nMinDepth = params[2].get_int();
+    }
+    if (nMinDepth < 0) {
+        throw JSONRPCError(RPC_INVALID_PARAMETER, "Minimum number of confirmations cannot be less than 0");
+    }
+
+    int nextBlockHeight = chainActive.Height() + 1;
+    boost::optional<TransactionBuilder> builder;
+    builder = TransactionBuilder(Params().GetConsensus(), nextBlockHeight, pwalletMain);
+
+    return builder.Build().get();
 }
 
 
