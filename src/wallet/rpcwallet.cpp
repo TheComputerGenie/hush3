@@ -4516,20 +4516,34 @@ UniValue z_createrawtransaction(const UniValue& params, bool fHelp)
 
     if (fHelp || params.size() < 2 || params.size() > 4)
         throw runtime_error(
-            "z_createrawtransaction ...\n"
+            "z_createrawtransaction [{\"txid\":\"id\",\"vout\":n},...] {\"address\":\"address\",\"amount\":5.555,\"memo\":\"...\",...} ( locktime ) ( expiryheight )\n"
             "\nCreate a raw shielded transaction, involving at least one shielded input or output. Amounts are decimal numbers with at most 8 digits of precision."
+            "Returns hex-encoded raw transaction.\n"
+            "Note that the transaction's inputs are not signed, and\n"
+            "it is not stored in the wallet or transmitted to the network.\n"
+
+            "\nArguments:\n"
         );
 
     LOCK2(cs_main, pwalletMain->cs_wallet);
-    UniValue inputs   = params[0].get_array();
-    UniValue outputs  = params[1].get_array();
-    bool fromTaddr    = false;
-    bool fromSapling  = false;
-    uint32_t branchId = CurrentEpochBranchId(chainActive.Height(), Params().GetConsensus());
+
+    UniValue inputs      = params[0].get_array();
+    UniValue outputs     = params[1].get_array();
+    bool fromTaddr       = false;
+    bool fromSapling     = false;
+    uint32_t branchId    = CurrentEpochBranchId(chainActive.Height(), Params().GetConsensus());
+
+    // Keep track of addresses to spot duplicates
+    set<std::string> setAddress;
+
+    // Recipients
+    std::vector<SendManyRecipient> taddrRecipients;
+    std::vector<SendManyRecipient> zaddrRecipients;
+    CAmount nTotalOut = 0;
 
     if (inputs.size()==0)
         throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid parameter, inputs array is empty.");
-    // TODO: process inputs and add to tx
+    // TODO: process inputs, validate txid's and vout's are valid
 
     if (outputs.size()==0)
         throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid parameter, outputs array is empty.");
@@ -4556,13 +4570,10 @@ UniValue z_createrawtransaction(const UniValue& params, bool fHelp)
 
                 bool toSapling = boost::get<libzcash::SaplingPaymentAddress>(&res) != nullptr;
                 bool toSprout  = !toSapling;
-                noSproutAddrs  = noSproutAddrs && toSapling;
-                containsSproutOutput  |= toSprout;
-                containsSaplingOutput |= toSapling;
 
                 if ( GetTime() > KOMODO_SAPLING_DEADLINE )
                 {
-                    if ( fromSprout || toSprout )
+                    if ( toSprout )
                         throw JSONRPCError(RPC_INVALID_PARAMETER,"Sprout usage has expired");
                 }
             } else {
