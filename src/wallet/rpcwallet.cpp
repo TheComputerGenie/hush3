@@ -4646,10 +4646,9 @@ UniValue z_createrawtransaction(const UniValue& params, bool fHelp)
     }
 
     int nextBlockHeight = chainActive.Height() + 1;
-    boost::optional<TransactionBuilder> builder;
-    builder = TransactionBuilder(Params().GetConsensus(), nextBlockHeight, pwalletMain);
+    TransactionBuilder builder = TransactionBuilder(Params().GetConsensus(), nextBlockHeight, pwalletMain);
 
-    return builder.Build().get();
+    return EncodeHexTx( builder.Build().get() );
 }
 
 
