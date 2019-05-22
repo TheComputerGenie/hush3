@@ -1,5 +1,6 @@
 // Copyright (c) 2010 Satoshi Nakamoto
 // Copyright (c) 2009-2014 The Bitcoin Core developers
+// Copyright (c) 2019 The Hush developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -4548,6 +4549,48 @@ UniValue z_createrawtransaction(const UniValue& params, bool fHelp)
     if (outputs.size()==0)
         throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid parameter, outputs array is empty.");
 
+    int nextBlockHeight = chainActive.Height() + 1;
+    TransactionBuilder builder = TransactionBuilder(Params().GetConsensus(), nextBlockHeight, pwalletMain);
+
+    // process inputs
+    for (const UniValue& input : inputs.getValues()) {
+        const UniValue& o = input.get_obj();
+        uint256 txid = ParseHashO(o, "txid");
+
+        const UniValue& vout_v = find_value(o, "vout");
+        if (!vout_v.isNum())
+            throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid parameter, missing vout key");
+        int nOutput = vout_v.get_int();
+        if (nOutput < 0)
+            throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid parameter, vout must be positive");
+
+        // TODO: add input to transaction builder
+        /*
+        if taddr
+           if (!builder.AddTransparentOutput(address, amount)) {
+               throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid output address, not a valid taddr.");
+           }
+        else if sapling
+            // select sapling notes
+            // fetch anchor and witnesses
+            // Add Sapling spends
+            for (size_t i = 0; i < notes.size(); i++) {
+                if (!witnesses[i]) {
+                    throw JSONRPCError(RPC_WALLET_ERROR, "Missing witness for Sapling note");
+                }
+                assert(builder.AddSaplingSpend(expsk, notes[i], anchor, witnesses[i].get()));
+            }
+        */
+    }
+
+    // Build the transaction
+    auto maybe_tx = builder_.Build();
+    if (!maybe_tx) {
+        throw JSONRPCError(RPC_WALLET_ERROR, "Failed to build transaction.");
+    }
+    auto tx = maybe_tx.get();
+
+    // process outputs
     for (const UniValue& o : outputs.getValues()) {
         if (!o.isObject())
             throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid parameter, expected object");
@@ -4644,9 +4687,6 @@ UniValue z_createrawtransaction(const UniValue& params, bool fHelp)
     if (nMinDepth < 0) {
         throw JSONRPCError(RPC_INVALID_PARAMETER, "Minimum number of confirmations cannot be less than 0");
     }
-
-    int nextBlockHeight = chainActive.Height() + 1;
-    TransactionBuilder builder = TransactionBuilder(Params().GetConsensus(), nextBlockHeight, pwalletMain);
 
     return EncodeHexTx( builder.Build().get() );
 }
