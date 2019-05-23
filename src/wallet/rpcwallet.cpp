@@ -4544,7 +4544,6 @@ UniValue z_createrawtransaction(const UniValue& params, bool fHelp)
 
     if (inputs.size()==0)
         throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid parameter, inputs array is empty.");
-    // TODO: process inputs, validate txid's and vout's are valid
 
     if (outputs.size()==0)
         throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid parameter, outputs array is empty.");
@@ -4554,23 +4553,26 @@ UniValue z_createrawtransaction(const UniValue& params, bool fHelp)
 
     // process inputs
     for (const UniValue& input : inputs.getValues()) {
-        const UniValue& o = input.get_obj();
-        uint256 txid = ParseHashO(o, "txid");
+        const UniValue& o        = input.get_obj();
+        uint256 txid             = ParseHashO(o, "txid");
+        const UniValue& vout_v   = find_value(o, "vout");
+        const UniValue& outindex = find_value(o, "outindex");
+        const UniValue& amount   = find_value(o, "amount");
+        int nOutindex            = outindex.get_int();
+        int nAmount              = amount.get_int();
 
-        const UniValue& vout_v = find_value(o, "vout");
-        if (!vout_v.isNum())
-            throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid parameter, missing vout key");
+        if (!vout_v.isNum() && !outindex.isNum())
+            throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid input, must provide either vout or outindex");
         int nOutput = vout_v.get_int();
-        if (nOutput < 0)
-            throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid parameter, vout must be positive");
 
-        // TODO: add input to transaction builder
-        /*
-        if taddr
-           if (!builder.AddTransparentOutput(address, amount)) {
-               throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid output address, not a valid taddr.");
-           }
-        else if sapling
+        // add input to transaction builder
+        if (nOutput) {
+           if (nOutput < 0)
+                throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid parameter, vout must be positive");
+           builder.AddTransparentInput(COutPoint(txid, nOutput), CScript(), nAmount);
+        } else {
+           if (nOutindex < 0)
+                throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid parameter, outindex must be positive");
             // select sapling notes
             // fetch anchor and witnesses
             // Add Sapling spends
@@ -4580,7 +4582,7 @@ UniValue z_createrawtransaction(const UniValue& params, bool fHelp)
                 }
                 assert(builder.AddSaplingSpend(expsk, notes[i], anchor, witnesses[i].get()));
             }
-        */
+        }
     }
 
     // Build the transaction
