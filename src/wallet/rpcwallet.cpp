@@ -4584,11 +4584,11 @@ UniValue z_createrawtransaction(const UniValue& params, bool fHelp)
     }
 
     // Build the transaction
-    auto maybe_tx = builder_.Build();
+    auto maybe_tx = builder.Build();
     if (!maybe_tx) {
         throw JSONRPCError(RPC_WALLET_ERROR, "Failed to build transaction.");
     }
-    auto tx = maybe_tx.get();
+    //auto tx = maybe_tx.get();
 
     // process outputs
     for (const UniValue& o : outputs.getValues()) {
