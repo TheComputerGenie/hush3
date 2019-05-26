@@ -4517,7 +4517,7 @@ UniValue z_createrawtransaction(const UniValue& params, bool fHelp)
 
     if (fHelp || params.size() < 2 || params.size() > 4)
         throw runtime_error(
-            "z_createrawtransaction [{\"txid\":\"id\",\"vout\":n},...] {\"address\":\"address\",\"amount\":5.555,\"memo\":\"...\",...} ( locktime ) ( expiryheight )\n"
+            "z_createrawtransaction [{\"txid\":\"id\",\"outindex\":n,\"address\":\"address\"},...] {\"address\":\"address\",\"amount\":5.555,\"memo\":\"...\",...} ( locktime ) ( expiryheight )\n"
             "\nCreate a raw shielded transaction, involving at least one shielded input or output. Amounts are decimal numbers with at most 8 digits of precision."
             "Returns hex-encoded raw transaction.\n"
             "Note that the transaction's inputs are not signed, and\n"
@@ -4550,7 +4550,7 @@ UniValue z_createrawtransaction(const UniValue& params, bool fHelp)
 
     int nextBlockHeight = chainActive.Height() + 1;
     TransactionBuilder builder = TransactionBuilder(Params().GetConsensus(), nextBlockHeight, pwalletMain);
-    builder.SetFee(minersFee);
+    //builder.SetFee(minersFee);
 
     // process inputs
     for (const UniValue& input : inputs.getValues()) {
@@ -4559,9 +4559,12 @@ UniValue z_createrawtransaction(const UniValue& params, bool fHelp)
         const UniValue& vout_v   = find_value(o, "vout");
         const UniValue& outindex = find_value(o, "outindex");
         const UniValue& amount   = find_value(o, "amount");
+        const UniValue& addr     = find_value(o, "address");
         int nOutindex            = outindex.get_int();
         int nAmount              = amount.get_int();
         int nOutput              = vout_v.get_int();
+        std::string fromAddress  = addr.get_str();
+
 
         if (!vout_v.isNum() && !outindex.isNum())
             throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid input, must provide either vout or outindex");
@@ -4583,26 +4586,33 @@ UniValue z_createrawtransaction(const UniValue& params, bool fHelp)
             SaplingExpandedSpendingKey expsk;
             uint256 ovk;
 
-            // TODO: look up fromAddress for (txid,outindex)
             auto address = DecodePaymentAddress(fromAddress);
             if (!boost::apply_visitor(HaveSpendingKeyForPaymentAddress(pwalletMain), address)) {
                 throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid from address, no spending key found for zaddr");
             }
 
-            spendingkey_ = boost::apply_visitor(GetSpendingKeyForPaymentAddress(pwalletMain), address).get();
-            auto sk = boost::get<libzcash::SaplingExtendedSpendingKey>(spendingkey_);
+            SpendingKey spendingkey = boost::apply_visitor(GetSpendingKeyForPaymentAddress(pwalletMain), address).get();
+            auto sk = boost::get<libzcash::SaplingExtendedSpendingKey>(spendingkey);
             expsk = sk.expsk;
             ovk = expsk.full_viewing_key().ovk;
 
             // Fetch Sapling anchor and witnesses
+            std::vector<SaplingOutPoint> ops;
+            std::vector<SaplingNote> notes;
             uint256 anchor;
+
+            std::vector<SaplingNoteEntry> z_sapling_inputs;
+            for (auto t : z_sapling_inputs) {
+                ops.push_back(t.op);
+                notes.push_back(t.note);
+            }
             std::vector<boost::optional<SaplingWitness>> witnesses;
             {
                 LOCK2(cs_main, pwalletMain->cs_wallet);
                 pwalletMain->GetSaplingNoteWitnesses(ops, witnesses, anchor);
             }
 
-            assert(builder.AddSaplingSpend(expsk, notes[i], anchor, witnesses[i].get()));
+            assert(builder.AddSaplingSpend(expsk, notes[0], anchor, witnesses[0].get()));
         }
     }
 
