@@ -34,6 +34,7 @@ testScripts=(
     'wallet_addresses.py'
     'wallet_sapling.py'
     'wallet_listnotes.py'
+    'wallet_raw_shielded.py'
     'listtransactions.py'
     'mempool_resurrect_test.py'
     'txn_doublespend.py'
