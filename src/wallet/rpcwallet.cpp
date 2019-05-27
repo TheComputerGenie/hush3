@@ -4518,12 +4518,40 @@ UniValue z_createrawtransaction(const UniValue& params, bool fHelp)
     if (fHelp || params.size() < 2 || params.size() > 4)
         throw runtime_error(
             "z_createrawtransaction [{\"txid\":\"id\",\"outindex\":n,\"address\":\"address\"},...] {\"address\":\"address\",\"amount\":5.555,\"memo\":\"...\",...} ( locktime ) ( expiryheight )\n"
-            "\nCreate a raw shielded transaction, involving at least one shielded input or output. Amounts are decimal numbers with at most 8 digits of precision."
+            "\nCreate a raw shielded transaction, involving at least one shielded input or output. Amounts are decimal numbers with at most 8 digits of precision.\n"
             "Returns hex-encoded raw transaction.\n"
-            "Note that the transaction's inputs are not signed, and\n"
-            "it is not stored in the wallet or transmitted to the network.\n"
+            "Note that the transaction's inputs are not signed, and it is not stored in the wallet or transmitted to the network.\n"
 
             "\nArguments:\n"
+            "1. \"inputs\"        (string, required) A json array of json objects, UTXOs or Sapling Notes\n"
+            "     [\n"
+            "       {\n"
+            "         \"txid\":\"id\",  (string, required) The transaction id\n"
+            "         \"vout\":n        (numeric, required) The transparent output number\n"
+            "         \"sequence\":n    (numeric, optional) The sequence number\n"
+            "       },\n"
+            "       {\n"
+            "         \"txid\":\"id\",  (string, required) The transaction id\n"
+            "         \"outindex\":n    (numeric, required) The JoinSplit output number (reported by z_listunspent)\n"
+            "         \"address\":n     (string, required) The address which owns the note\n"
+            "       }\n"
+            "       ,...\n"
+            "     ]\n"
+            "2. \"outputs\"        (string, required) A json array of json objects\n"
+            "     [\n"
+            "       {\n"
+            "         \"address\":n     (string, required)  The address receiving funds\n"
+            "         \"amount\":n      (numeric, required) The amount to send\n"
+            "         \"memo\":n        (string, optional) Hex-encoded memo, shielded outputs only\n"
+            "       }\n"
+            "       ,...\n"
+            "     ]\n"
+            "3. locktime              (numeric, optional, default=0) Raw locktime. Non-0 value also locktime-activates inputs\n"
+            "4. expiryheight          (numeric, optional, default=" + strprintf("%d", DEFAULT_TX_EXPIRY_DELTA) + ") Expiry height of transaction (if Overwinter is active)\n"
+            "\nResult:\n"
+            "\"transaction\"            (string) hex string of the transaction\n"
+            "\nExamples\n"
+            + HelpExampleCli("z_createrawtransaction", "\"[{\\\"txid\\\":\\\"myid\\\",\\\"outindex\\\":0}]\" \"{\\\"address\\\":\\\"zaddr\\\", \\\"amount\\\":5}\"")
         );
 
     LOCK2(cs_main, pwalletMain->cs_wallet);
