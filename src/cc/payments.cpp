@@ -326,11 +326,6 @@ bool PaymentsValidate(struct CCcontract_info *cp,Eval* eval,const CTransaction &
                 return(eval->Invalid("negative values"));
             if ( minimum < 10000 )
                 return(eval->Invalid("minimum must be over 10000"));
-            if ( amountReleased < minrelease*COIN )
-            {
-                fprintf(stderr, "does not meet minrelease amount.%li minrelease.%li\n",amountReleased, (int64_t)minrelease*COIN);
-                return(eval->Invalid("amount is too small"));
-            }
             Paymentspk = GetUnspendable(cp,0);
             txidpk = CCtxidaddr(txidaddr,createtxid);
             GetCCaddress1of2(cp,txidaddr,Paymentspk,txidpk);
@@ -343,6 +338,11 @@ bool PaymentsValidate(struct CCcontract_info *cp,Eval* eval,const CTransaction &
 
             if ( !fIsMerge )
             {
+                if ( amountReleased < minrelease*COIN )
+                {
+                    fprintf(stderr, "does not meet minrelease amount.%li minrelease.%li\n",amountReleased, (int64_t)minrelease*COIN);
+                    return(eval->Invalid("amount is too small"));
+                }
                 // Get all the script pubkeys and allocations
                 std::vector<int64_t> allocations;
                 std::vector<CScript> scriptPubKeys;
@@ -406,6 +406,7 @@ bool PaymentsValidate(struct CCcontract_info *cp,Eval* eval,const CTransaction &
                     {
                         // token snapshot
                         // payments_gettokenallocations(top, bottom, excludeScriptPubKeys, tokenid, mpzTotalAllocations, scriptPubKeys, allocations);
+                        return(eval->Invalid("tokens not yet implemented"));
                     }
                 }
                 // sanity check to make sure we got all the required info, skip for merge type tx
@@ -519,8 +520,8 @@ bool PaymentsValidate(struct CCcontract_info *cp,Eval* eval,const CTransaction &
                 else if ( i == dust+1 )
                     return(eval->Invalid("cannot merge only dust"));
             }
-        } else return(eval->Invalid("create transaction cannot decode"));
-    } else return(eval->Invalid("Could not get contract transaction"));
+        } else return(eval->Invalid("cannot decode create transaction"));
+    } else return(eval->Invalid("could not get contract transaction"));
     return(true);
 }
 // end of consensus code
@@ -556,7 +557,7 @@ int64_t AddPaymentsInputs(bool fLockedBlocks,int8_t GetBalance,struct CCcontract
             txid = it->first.txhash;
             vout = (int32_t)it->first.index;
             //fprintf(stderr,"iter.%d %s/v%d %s\n",iter,txid.GetHex().c_str(),vout,coinaddr);
-            if ( (vout == 0 || vout == 1) && GetTransaction(txid,vintx,hashBlock,false) != 0 )
+            if ( GetTransaction(txid,vintx,hashBlock,false) != 0 )
             {
                 if ( (nValue= IsPaymentsvout(cp,vintx,vout,coinaddr,ccopret)) > PAYMENTS_TXFEE && nValue >= threshold && myIsutxo_spentinmempool(ignoretxid,ignorevin,txid,vout) == 0 )
                 {
@@ -1067,15 +1068,27 @@ UniValue PaymentsMerge(struct CCcontract_info *cp,char *jsonstr)
 UniValue PaymentsTxidopret(struct CCcontract_info *cp,char *jsonstr)
 {
     CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight()); UniValue result(UniValue::VOBJ); CPubKey mypk; std::string rawtx;
-    std::vector<uint8_t> scriptPubKey,opret; int32_t n,retval0,retval1=0; int64_t allocation;
+    std::vector<uint8_t> scriptPubKey,opret; int32_t n,retval0,retval1=0; int64_t allocation; CScript test; txnouttype whichType;
     cJSON *params = payments_reparse(&n,jsonstr);
     mypk = pubkey2pk(Mypubkey());
     if ( params != 0 && n > 1 && n <= 3 )
     {
         allocation = (int64_t)jint(jitem(params,0),0);
-        retval0 = payments_parsehexdata(scriptPubKey,jitem(params,1),0);
-        CScript test = CScript(scriptPubKey.begin(),scriptPubKey.end());
-        txnouttype whichType;
+        std::string address; 
+        address.append(jstri(params,1));
+        CTxDestination destination = DecodeDestination(address);
+        if ( IsValidDestination(destination) )
+        {
+            // its an address 
+            test = GetScriptForDestination(destination);
+            scriptPubKey = std::vector<uint8_t> (test.begin(),test.end());
+        }
+        else 
+        {
+            // its a scriptpubkey
+            retval0 = payments_parsehexdata(scriptPubKey,jitem(params,1),0);
+            test = CScript(scriptPubKey.begin(),scriptPubKey.end());
+        }
         if (!::IsStandard(test, whichType))
         {
             result.push_back(Pair("result","error"));
@@ -1279,7 +1292,8 @@ UniValue PaymentsAirdropTokens(struct CCcontract_info *cp,char *jsonstr)
     uint256 hashBlock, tokenid = zeroid; CTransaction tx; CPubKey Paymentspk,mypk; char markeraddr[64]; std::string rawtx; 
     int32_t lockedblocks,minrelease,top,bottom,n,i,minimum=10000; std::vector<std::vector<uint8_t>> excludeScriptPubKeys; int8_t fixedAmount;
     cJSON *params = payments_reparse(&n,jsonstr);
-    if ( params != 0 && n >= 6 )
+    // disable for now. Need token snapshot function. 
+    if ( 0 ) //params != 0 && n >= 6 )
     {
         tokenid = payments_juint256(jitem(params,0));
         lockedblocks = juint(jitem(params,1),0);
@@ -1346,7 +1360,8 @@ UniValue PaymentsAirdropTokens(struct CCcontract_info *cp,char *jsonstr)
     else
     {
         result.push_back(Pair("result","error"));
-        result.push_back(Pair("error","parameters error"));
+        //result.push_back(Pair("error","parameters error"));
+        result.push_back(Pair("error","tokens airdrop not yet impmlemented"));
     }
     if ( params != 0 )
         free_json(params);

@@ -4,10 +4,11 @@
 
 ![Logo](doc/hush/hush.png "Logo")
 
-HUSH (formerly Zdash) is a code fork of [ZCash](https://z.cash/) which has it's
-own genesis block.  Based on Bitcoin's code, it intends to offer a far higher
-standard of privacy through a sophisticated zero-knowledge proving scheme that
-preserves confidentiality of transaction metadata.
+HUSH (originally Zdash) is a code fork of [ZCash](https://z.cash/) which has
+it's own genesis block. It is not a fork of another network.  Based on
+Bitcoin's code, it intends to offer a far higher standard of privacy through a
+sophisticated zero-knowledge proving scheme that preserves confidentiality of
+transaction metadata.
 
 This software is the HUSH node and command-line client. It downloads and stores
 the entire history of HUSH transactions; depending on the speed of your
@@ -84,6 +85,8 @@ you can see your funds with this command:
 
         ./src/hush-cli getwalletinfo
 
+NOTE: Do not use this wallet except to send funds to a new wallet!
+
 ### Private Keys
 
 You can also transport funds one address at a time via private keys.
@@ -115,7 +118,7 @@ The source code for the Hush web wallet is here: https://github.com/MyHush/myhus
 Installing
 ----------
 
-See [INSTALL.md](https://github.com/MyHush/hush/blob/master/INSTALL.md).
+See [INSTALL.md](https://github.com/MyHush/hush3/blob/master/INSTALL.md).
 
 
 License
