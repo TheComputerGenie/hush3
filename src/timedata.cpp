@@ -31,6 +31,8 @@ using namespace std;
 
 static CCriticalSection cs_nTimeOffset;
 static int64_t nTimeOffset = 0;
+#define KOMODO_ASSETCHAIN_MAXLEN 65
+extern char ASSETCHAINS_SYMBOL[KOMODO_ASSETCHAIN_MAXLEN];
 
 /**
  * "Never go to sea with two chronometers; take one or three."
@@ -94,7 +96,7 @@ void AddTimeData(const CNetAddr& ip, int64_t nOffsetSample)
         int64_t nMedian = vTimeOffsets.median();
         std::vector<int64_t> vSorted = vTimeOffsets.sorted();
         // Only let other nodes change our time by so much
-        if (abs64(nMedian) < 70 * 60)
+        if (abs64(nMedian) < 30) // thanks to zawy for pointing this out!! zcash issues 4021 //70 * 60)
         {
             nTimeOffset = nMedian;
         }
@@ -114,7 +116,12 @@ void AddTimeData(const CNetAddr& ip, int64_t nOffsetSample)
                 if (!fMatch)
                 {
                     fDone = true;
-                    string strMessage = _("Warning: Please check that your computer's date and time are correct! If your clock is wrong Zcash will not work properly.");
+                    string strMessage;
+                    if( strncmp(ASSETCHAINS_SYMBOL, "HUSH3",5) == 0 ) {
+                        strMessage = _("Warning: Please check that your computer's date and time are correct! If your clock is wrong Hush will not work properly.");
+                    } else {
+                        strMessage = _("Warning: Please check that your computer's date and time are correct! If your clock is wrong Komodo will not work properly.");
+                    }
                     strMiscWarning = strMessage;
                     LogPrintf("*** %s\n", strMessage);
                     uiInterface.ThreadSafeMessageBox(strMessage, "", CClientUIInterface::MSG_WARNING);
