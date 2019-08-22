@@ -2049,6 +2049,8 @@ UniValue getchaintxstats(const UniValue& params, bool fHelp)
             ret.pushKV("window_shielded_payments", nShieldedPaymentsDiff);
             ret.pushKV("window_shielding_payments", nShieldingPaymentsDiff);
             ret.pushKV("window_deshielding_payments", nDeshieldingPaymentsDiff);
+            ret.pushKV("window_shielded_txcount", nShieldedTxDiff);
+
             if (nTxDiff > 0) {
                 ret.pushKV("shielded_tx_percent",        ((double)nShieldedTxDiff)      / nTxDiff);
                 ret.pushKV("fully_shielded_tx_percent",  ((double)nFullyShieldedTxDiff) / nTxDiff);

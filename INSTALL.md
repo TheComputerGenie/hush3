@@ -24,7 +24,7 @@ sudo swapon /swapfile
 # install build depedencies
 sudo apt-get install build-essential pkg-config libc6-dev m4 g++-multilib \
       autoconf libtool ncurses-dev unzip git python zlib1g-dev wget \
-      bsdmainutils automake curl unzip nano
+      bsdmainutils automake curl unzip nano libsodium-dev
 # pull
 git clone https://github.com/MyHush/hush3.git
 cd hush3
@@ -49,7 +49,7 @@ Get dependencies:
 sudo apt-get install \
       build-essential pkg-config libc6-dev m4 g++-multilib \
       autoconf libtool ncurses-dev unzip git python \
-      zlib1g-dev wget bsdmainutils automake mingw-w64 cmake
+      zlib1g-dev wget bsdmainutils automake mingw-w64 cmake libsodium-dev
 ```
 
 Downloading Git source repo, building and running Hush:
