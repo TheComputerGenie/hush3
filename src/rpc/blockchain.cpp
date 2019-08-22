@@ -49,6 +49,7 @@
 using namespace std;
 
 extern int32_t KOMODO_INSYNC;
+extern bool fZindex;
 extern void TxToJSON(const CTransaction& tx, const uint256 hashBlock, UniValue& entry);
 void ScriptPubKeyToJSON(const CScript& scriptPubKey, UniValue& out, bool fIncludeHex);
 int32_t komodo_notarized_height(int32_t *prevMoMheightp,uint256 *hashp,uint256 *txidp);
@@ -1949,7 +1950,7 @@ UniValue getchaintxstats(const UniValue& params, bool fHelp)
             "{\n"
             "  \"time\": xxxxx,                         (numeric) The timestamp for the final block in the window in UNIX format.\n"
             "  \"txcount\": xxxxx,                      (numeric) The total number of transactions in the chain up to that point.\n"
-            "  \"window_final_block_hash\": \"...\",      (string) The hash of the final block in the window.\n"
+            "  \"window_final_block_hash\": \"...\",    (string) The hash of the final block in the window.\n"
             "  \"window_block_count\": xxxxx,           (numeric) Size of the window in number of blocks.\n"
             "  \"window_tx_count\": xxxxx,              (numeric) The number of transactions in the window. Only returned if \"window_block_count\" is > 0.\n"
             "  \"window_interval\": xxxxx,              (numeric) The elapsed time in the window in seconds. Only returned if \"window_block_count\" is > 0.\n"
@@ -1990,20 +1991,91 @@ UniValue getchaintxstats(const UniValue& params, bool fHelp)
         }
     }
 
-    const CBlockIndex* pindexPast = pindex->GetAncestor(pindex->GetHeight() - blockcount);
-    int nTimeDiff = pindex->GetMedianTimePast() - pindexPast->GetMedianTimePast();
-    int nTxDiff = pindex->nChainTx - pindexPast->nChainTx;
+    const CBlockIndex* pindexPast      = pindex->GetAncestor(pindex->GetHeight() - blockcount);
+    int nTimeDiff                      = pindex->GetMedianTimePast() - pindexPast->GetMedianTimePast();
+    int nTxDiff                        = pindex->nChainTx - pindexPast->nChainTx;
 
     UniValue ret(UniValue::VOBJ);
     ret.pushKV("time", (int64_t)pindex->nTime);
     ret.pushKV("txcount", (int64_t)pindex->nChainTx);
+
+    if (fZindex) {
+        ret.pushKV("notarizations", (int64_t)pindex->nChainNotarizations);
+        ret.pushKV("shielded_txcount", (int64_t)pindex->nChainShieldedTx);
+        ret.pushKV("fully_shielded_txcount", (int64_t)pindex->nChainFullyShieldedTx);
+        ret.pushKV("deshielding_txcount", (int64_t)pindex->nChainDeshieldingTx);
+        ret.pushKV("shielding_txcount", (int64_t)pindex->nChainShieldingTx);
+        ret.pushKV("shielded_payments", (int64_t)pindex->nChainShieldedPayments);
+        ret.pushKV("fully_shielded_payments", (int64_t)pindex->nChainFullyShieldedPayments);
+        ret.pushKV("deshielding_payments", (int64_t)pindex->nChainDeshieldingPayments);
+        ret.pushKV("shielding_payments", (int64_t)pindex->nChainShieldingPayments);
+    }
+
     ret.pushKV("window_final_block_hash", pindex->GetBlockHash().GetHex());
+    ret.pushKV("window_final_block_height", pindex->GetHeight());
     ret.pushKV("window_block_count", blockcount);
+
     if (blockcount > 0) {
-        ret.pushKV("window_tx_count", nTxDiff);
+        int64_t nPaymentsDiff              = pindex->nChainPayments - pindexPast->nChainPayments;
+        int64_t nShieldedTxDiff            = pindex->nChainShieldedTx - pindexPast->nChainShieldedTx;
+        int64_t nShieldingTxDiff           = pindex->nChainShieldingTx - pindexPast->nChainShieldingTx;
+        int64_t nDeshieldingTxDiff         = pindex->nChainDeshieldingTx - pindexPast->nChainDeshieldingTx;
+        int64_t nFullyShieldedTxDiff       = pindex->nChainFullyShieldedTx - pindexPast->nChainFullyShieldedTx;
+        int64_t nShieldedPaymentsDiff      = pindex->nChainShieldedPayments - pindexPast->nChainShieldedPayments;
+        int64_t nShieldingPaymentsDiff     = pindex->nChainShieldingPayments - pindexPast->nChainShieldingPayments;
+        int64_t nDeshieldingPaymentsDiff   = pindex->nChainDeshieldingPayments - pindexPast->nChainDeshieldingPayments;
+        int64_t nFullyShieldedPaymentsDiff = pindex->nChainFullyShieldedPayments - pindexPast->nChainFullyShieldedPayments;
+        unsigned int nNotarizationsDiff    = pindex->nChainNotarizations - pindexPast->nChainNotarizations;
+
         ret.pushKV("window_interval", nTimeDiff);
+        ret.pushKV("window_txcount", nTxDiff);
+        ret.pushKV("window_payments", nPaymentsDiff);
+        ret.pushKV("window_notarizations", (int) nNotarizationsDiff);
+
         if (nTimeDiff > 0) {
-            ret.pushKV("txrate", ((double)nTxDiff) / nTimeDiff);
+            ret.pushKV("txrate",                     ((double)nTxDiff)                    / nTimeDiff);
+            if (fZindex) {
+                ret.pushKV("notarization_txrate",        ((double)nNotarizationsDiff)         / nTimeDiff);
+                ret.pushKV("shielded_txrate",            ((double)nShieldedTxDiff)            / nTimeDiff);
+                ret.pushKV("fully_shielded_txrate",      ((double)nFullyShieldedTxDiff)       / nTimeDiff);
+                ret.pushKV("paymentrate",                ((double)nPaymentsDiff)              / nTimeDiff);
+                ret.pushKV("shielded_paymentrate",       ((double)nShieldedPaymentsDiff)      / nTimeDiff);
+                ret.pushKV("fully_shielded_paymentrate", ((double)nFullyShieldedPaymentsDiff) / nTimeDiff);
+            }
+        }
+
+        if (fZindex) {
+            ret.pushKV("window_fully_shielded_payments", nFullyShieldedPaymentsDiff);
+            ret.pushKV("window_shielded_payments", nShieldedPaymentsDiff);
+            ret.pushKV("window_shielding_payments", nShieldingPaymentsDiff);
+            ret.pushKV("window_deshielding_payments", nDeshieldingPaymentsDiff);
+            if (nTxDiff > 0) {
+                ret.pushKV("shielded_tx_percent",        ((double)nShieldedTxDiff)      / nTxDiff);
+                ret.pushKV("fully_shielded_tx_percent",  ((double)nFullyShieldedTxDiff) / nTxDiff);
+                ret.pushKV("shielding_tx_percent",       ((double)nShieldingTxDiff)     / nTxDiff);
+                ret.pushKV("deshielding_tx_percent",     ((double)nDeshieldingTxDiff)   / nTxDiff);
+            }
+            if (nPaymentsDiff > 0) {
+                ret.pushKV("shielded_payments_percent",       ((double)nShieldedPaymentsDiff)      / nPaymentsDiff);
+                ret.pushKV("fully_shielded_payments_percent", ((double)nFullyShieldedPaymentsDiff) / nPaymentsDiff);
+                ret.pushKV("shielding_payments_percent",      ((double)nShieldingPaymentsDiff)     / nPaymentsDiff);
+                ret.pushKV("deshielding_payments_percent",    ((double)nDeshieldingPaymentsDiff)   / nPaymentsDiff);
+            }
+
+            // Shielded-only statistics
+            UniValue shielded(UniValue::VOBJ);
+            if (nShieldedTxDiff > 0) {
+                shielded.pushKV("fully_shielded_tx_percent", ((double)nFullyShieldedTxDiff) / nShieldedTxDiff );
+                shielded.pushKV("shielding_tx_percent",      ((double)nShieldingTxDiff)     / nShieldedTxDiff );
+                shielded.pushKV("deshielding_tx_percent",    ((double)nDeshieldingTxDiff)   / nShieldedTxDiff );
+            }
+            if (nShieldedPaymentsDiff > 0) {
+                shielded.pushKV("fully_shielded_payments_percent", ((double)nFullyShieldedPaymentsDiff) / nShieldedPaymentsDiff );
+                shielded.pushKV("shielding_payments_percent",      ((double)nShieldingPaymentsDiff)     / nShieldedPaymentsDiff );
+                shielded.pushKV("deshielding_payments_percent",    ((double)nDeshieldingPaymentsDiff)   / nShieldedPaymentsDiff );
+            }
+            if(nShieldedTxDiff+nShieldedPaymentsDiff > 0)
+                ret.pushKV("shielded_only", shielded);
         }
     }
 

@@ -125,6 +125,7 @@ static const int64_t DEFAULT_MAX_TIP_AGE = 24 * 60 * 60;
 #define DEFAULT_ADDRESSINDEX (GetArg("-ac_cc",0) != 0 || GetArg("-ac_ccactivate",0) != 0)
 #define DEFAULT_SPENTINDEX (GetArg("-ac_cc",0) != 0 || GetArg("-ac_ccactivate",0) != 0)
 static const bool DEFAULT_TIMESTAMPINDEX = false;
+static const bool DEFAULT_SHIELDEDINDEX = false;
 static const unsigned int DEFAULT_DB_MAX_OPEN_FILES = 1000;
 static const bool DEFAULT_DB_COMPRESSION = true;
 
@@ -157,6 +158,7 @@ extern bool fImporting;
 extern bool fReindex;
 extern int nScriptCheckThreads;
 extern bool fTxIndex;
+extern bool fZindex;
 extern bool fIsBareMultisigStd;
 extern bool fCheckBlockIndex;
 extern bool fCheckpointsEnabled;
