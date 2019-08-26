@@ -620,7 +620,7 @@ public:
         READWRITE(VARINT(nTx));
 
         // These values only serialized when -zindex enabled
-        if(fZindex) {
+        if((s.GetType() & SER_DISK) && fZindex) {
             READWRITE(VARINT(nShieldedTx));
             READWRITE(VARINT(nShieldingTx));
             READWRITE(VARINT(nDeshieldingTx));
