@@ -850,21 +850,36 @@ std::string JSONRPCExecBatch(const UniValue& vReq)
     return ret.write() + "\n";
 }
 
+bool valid_in_warmup(const std::string method)
+{
+    // Which methods are truly incompatible with this?
+    // Most RPCs allowed in safe mode are probably fine, and some other read-only ops
+    // TODO: use a proper struct or lookup table
+    if (method != "getinfo" && method != "stop" && method != "z_listaddresses" && method != "getnewaddress" && method != "z_getnewaddress")
+        return false;
+    return true;
+}
+
 UniValue CRPCTable::execute(const std::string &strMethod, const UniValue &params) const
 {
-    // Return immediately if in warmup
-    {
-        LOCK(cs_rpcWarmup);
-        if (fRPCInWarmup)
-            throw JSONRPCError(RPC_IN_WARMUP, rpcWarmupStatus);
-    }
-
-    //printf("RPC call: %s\n", strMethod.c_str());
-
     // Find method
     const CRPCCommand *pcmd = tableRPC[strMethod];
     if (!pcmd)
         throw JSONRPCError(RPC_METHOD_NOT_FOUND, "Method not found");
+
+    // Return immediately if in warmup
+    {
+        LOCK(cs_rpcWarmup);
+        if (fRPCInWarmup) {
+            if (valid_in_warmup(pcmd->name)) {
+                fprintf(stderr,"Method %s allowed in warmup\n", pcmd->name.c_str() );
+            } else {
+                throw JSONRPCError(RPC_IN_WARMUP, rpcWarmupStatus);
+            }
+        }
+    }
+
+    // printf("RPC call: %s\n", strMethod.c_str());
 
     g_rpcSignals.PreCommand(*pcmd);
 
