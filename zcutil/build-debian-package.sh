@@ -51,25 +51,26 @@ strip $DEB_BIN/komodo-cli
 cp $SRC_PATH/src/hushd $DEB_BIN
 # Copy docs
 #cp $SRC_PATH/doc/release-notes/release-notes-1.0.0.md $DEB_DOC/changelog
-cp $SRC_DEB/changelog $DEB_DOC/changelog.Debian
+cp $SRC_PATH/contrib/debian/changelog $DEB_DOC
+#cp $SRC_DEB/changelog $DEB_DOC/changelog.Debian
 cp $SRC_DEB/copyright $DEB_DOC
 cp -r $SRC_DEB/examples $DEB_DOC
 # Copy manpages
-cp $SRC_DOC/man/hushd.1 $DEB_MAN
-cp $SRC_DOC/man/hush-cli.1 $DEB_MAN
+cp $SRC_DOC/man/komodod.1 $DEB_MAN/hushd.1
+cp $SRC_DOC/man/komodo-cli.1 $DEB_MAN/hush-cli.1
 # Copy bash completion files
 cp $SRC_PATH/contrib/hushd.bash-completion $DEB_CMP/hushd
 cp $SRC_PATH/contrib/hush-cli.bash-completion $DEB_CMP/hush-cli
 # Gzip files
 gzip --best -n $DEB_DOC/changelog
-gzip --best -n $DEB_DOC/changelog.Debian
+#gzip --best -n $DEB_DOC/changelog.Debian
 gzip --best -n $DEB_MAN/hushd.1
 gzip --best -n $DEB_MAN/hush-cli.1
 
 cd $SRC_PATH/contrib
 
 # Create the control file
-dpkg-shlibdeps $DEB_BIN/komodod $DEB_BIN/komodo-cli $DEB_BIN/hushd $DEB_BIN/hush-cli
+dpkg-shlibdeps $DEB_BIN/komodod $DEB_BIN/komodo-cli
 dpkg-gencontrol -P$BUILD_DIR -v$DEBVERSION
 
 # Create the Debian package

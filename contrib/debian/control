@@ -1,4 +1,4 @@
-Source: Hush
+Source: hush
 Section: utils
 Priority: optional
 Maintainer: Hush <myhushteam@gmail.com>
@@ -13,5 +13,4 @@ Vcs-Browser: https://github.com/MyHush/hush3
 Package: hush
 Architecture: amd64
 Depends: ${shlibs:Depends}
-Description: Hush cryptocoin full node. Speak And Transact Freely.
-Hush inherits from Bitcoin Protocol and Zcash Protocol and is focused on private communications.
+Description: Hush cryptocoin full node. Speak And Transact Freely. Hush inherits from Bitcoin Protocol and Zcash Protocol and is focused on private communications.
