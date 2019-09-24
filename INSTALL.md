@@ -78,3 +78,11 @@ set.
 
 This also means that RaspberryPi devices will not work, unless they have a
 newer ARMv8-based Raspberry Pi.
+
+## Building Debian Packages
+
+You can build your own custom Hush debian package for your production infrastructure
+and also to use in containers for testing. Make sure to compile Hush first, then run:
+
+	./zcutil/build-debian-package.sh
+
