@@ -1,0 +1,9 @@
+usr/bin/hush-komodod
+usr/bin/hush-komodo-cli
+usr/bin/hush-komodo-tx
+usr/bin/hush-cli
+usr/bin/hush-tx
+usr/bin/hushd
+usr/share/hush/sapling-output.params
+usr/share/hush/sapling-spend.params
+
