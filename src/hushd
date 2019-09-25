@@ -37,10 +37,14 @@ ORACLE=236
 GATEWAY=241
 CCENABLE=$FAUCET,$HEIR,$CHANNEL,$ORACLE,$GATEWAY
 
-#NOTE: This is not compatible with upstream KMD komodod,
-# but you can reuse one hush3 komodod binary in various
-# directories/repos on one server, to save disk space
 KMD=${KOMODOD:-./komodod}
+
+# Debian packages prefix binaries with hush-
+# so we prevent conflicting with official komodod
+if [ ! -e "$KMD" ]; then
+	KMD=hush-komodod
+fi
+
 $KMD -ac_name=$NAME -ac_sapling=1                \
      -ac_reward=$REWARD                          \
      -ac_halving=$HALVING                        \

@@ -8,4 +8,9 @@ cd $DIR
 NAME=HUSH3
 
 CLI=${KOMODOCLI:-./komodo-cli}
+# Debian packages prefix binaries with hush-
+# so we prevent conflicting with official komodod
+if [ ! -e "$CLI" ]; then
+	CLI=hush-komodo-cli
+fi
 $CLI -ac_name=$NAME "$@"

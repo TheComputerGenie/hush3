@@ -5,6 +5,12 @@
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd $DIR
 
-NAME=HUSHT
+NAME=HUSH3
 
-./komodo-tx -ac_name=$NAME "$@"
+TX=${KOMODOTX:-./komodo-tx}
+# Debian packages prefix binaries with hush-
+# so we prevent conflicting with official komodod
+if [ ! -e "$TX" ]; then
+	TX=hush-komodo-tx
+fi
+$TX -ac_name=$NAME "$@"
