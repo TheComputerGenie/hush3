@@ -34,7 +34,7 @@
 // Must be kept in sync with configure.ac !
 #define CLIENT_VERSION_MAJOR 3
 #define CLIENT_VERSION_MINOR 1
-#define CLIENT_VERSION_REVISION 0
+#define CLIENT_VERSION_REVISION 1
 #define CLIENT_VERSION_BUILD 0
 
 //! Set to true for release, false for prerelease or test build
@@ -56,7 +56,7 @@
 #define DO_STRINGIZE(X) #X
 
 //! Copyright string used in Windows .rc files
-#define COPYRIGHT_STR "2009-" STRINGIZE(COPYRIGHT_YEAR) " The Bitcoin Core Developers, The Zcash developers, Komodo developers, and Verus developers"
+#define COPYRIGHT_STR "2009-" STRINGIZE(COPYRIGHT_YEAR) " The Bitcoin Core, Zcash, Komodo, Hush, and Verus developers"
 
 /**
  * bitcoind-res.rc includes this file, but it cannot cope with real c++ code.
