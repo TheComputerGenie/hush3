@@ -4191,9 +4191,9 @@ UniValue z_viewtransaction(const UniValue& params, bool fHelp)
     UniValue outputs(UniValue::VARR);
 
     // Sprout spends
-    for (size_t i = 0; i < wtx.vJoinSplit.size(); ++i) {
-        for (size_t j = 0; j < wtx.vJoinSplit[i].nullifiers.size(); ++j) {
-            auto nullifier = wtx.vJoinSplit[i].nullifiers[j];
+    for (size_t i = 0; i < wtx.vjoinsplit.size(); ++i) {
+        for (size_t j = 0; j < wtx.vjoinsplit[i].nullifiers.size(); ++j) {
+            auto nullifier = wtx.vjoinsplit[i].nullifiers[j];
 
             // Fetch the note that is being spent, if ours
             auto res = pwalletMain->mapSproutNullifiersToNotes.find(nullifier);
