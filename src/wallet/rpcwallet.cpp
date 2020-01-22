@@ -867,6 +867,62 @@ UniValue listaddressgroupings(const UniValue& params, bool fHelp, const CPubKey&
     return jsonGroupings;
 }
 
+UniValue z_signmessage(const UniValue& params, bool fHelp, const CPubKey& mypk)
+{
+    if (!EnsureWalletIsAvailable(fHelp))
+        return NullUniValue;
+
+    if (fHelp || params.size() != 2)
+        throw runtime_error(
+            "z_signmessage \"zaddr\" \"message\"\n"
+            "\nSign a message with the private key of a zaddr"
+            + HelpRequiringPassphrase() + "\n"
+            "\nArguments:\n"
+            "1. \"zaddr\"  (string, required) The Sapling shielded address to use for the private key.\n"
+            "2. \"message\"         (string, required) The message to create a signature of.\n"
+            "\nResult:\n"
+            "\"signature\"          (string) The signature of the message encoded in base 64\n"
+            "\nExamples:\n"
+            "\nCreate the signature\n"
+            + HelpExampleCli("z_signmessage", "\"zs1...\" \"my message\"") +
+            "\nVerify the signature\n"
+            + HelpExampleCli("z_verifymessage", "\"zs1...\" \"signature\" \"my message\"") +
+            "\nAs json rpc\n"
+            + HelpExampleRpc("z_signmessage", "\"zs1...\", \"my message\"")
+        );
+
+    LOCK2(cs_main, pwalletMain->cs_wallet);
+
+    EnsureWalletIsUnlocked();
+
+    string strAddress = params[0].get_str();
+    string strMessage = params[1].get_str();
+    uint32_t branchId = CurrentEpochBranchId(chainActive.Height(), Params().GetConsensus());
+
+    // Is it a valid zaddr in this set of consensus rules?
+    auto res = DecodePaymentAddress(strAddress);
+    if (!IsValidPaymentAddress(res, branchId)) {
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid zaddr!");
+    }
+
+    // Check that we have the spending key
+    if (!boost::apply_visitor(HaveSpendingKeyForPaymentAddress(pwalletMain), res)) {
+         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "From address does not belong to this node, zaddr spending key not found.");
+    }
+    // TODO: get sig data, serialized, encode, return
+    CHashWriter ss(SER_GETHASH, 0);
+    // TODO: different magic?
+    ss << strMessageMagic;
+    ss << strMessage;
+
+    vector<unsigned char> vchSig;
+    //TODO: Actually get sig data
+    //if (!key.SignCompact(ss.GetHash(), vchSig))
+    //    throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Sign failed");
+
+    return EncodeBase64(&vchSig[0], vchSig.size());
+}
+
 UniValue signmessage(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
     if (!EnsureWalletIsAvailable(fHelp))
@@ -8158,6 +8214,8 @@ static const CRPCCommand commands[] =
     { "wallet",             "setaccount",               &setaccount,               true  },
     { "wallet",             "settxfee",                 &settxfee,                 true  },
     { "wallet",             "signmessage",              &signmessage,              true  },
+    { "wallet",             "z_signmessage",            &z_signmessage,            true  },
+    { "wallet",             "z_verifymessage",          &z_verifymessage,          true  },
     { "wallet",             "walletlock",               &walletlock,               true  },
     { "wallet",             "walletpassphrasechange",   &walletpassphrasechange,   true  },
     { "wallet",             "walletpassphrase",         &walletpassphrase,         true  },

@@ -1,5 +1,6 @@
 // Copyright (c) 2010 Satoshi Nakamoto
 // Copyright (c) 2009-2014 The Bitcoin Core developers
+// Copyright (c) 2019-2020 The Hush developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -777,6 +778,64 @@ UniValue createmultisig(const UniValue& params, bool fHelp, const CPubKey& mypk)
     result.push_back(Pair("redeemScript", HexStr(inner.begin(), inner.end())));
 
     return result;
+}
+
+UniValue z_verifymessage(const UniValue& params, bool fHelp, const CPubKey& mypk)
+{
+    if (fHelp || params.size() != 3)
+        throw runtime_error(
+            "z_verifymessage \"zaddr\" \"signature\" \"message\"\n"
+            "\nVerify a signed message\n"
+            "\nArguments:\n"
+            "1. \"zaddr\"    (string, required) The Sapling zaddr to use for the signature.\n"
+            "2. \"signature\"       (string, required) The signature provided by the signer in base 64 encoding (see signmessage).\n"
+            "3. \"message\"         (string, required) The message that was signed.\n"
+            "\nResult:\n"
+            "true|false   (boolean) If the signature is verified or not.\n"
+            "\nExamples:\n"
+            "\nCreate the signature\n"
+            + HelpExampleCli("z_signmessage", "\"zs1...\" \"my message\"") +
+            "\nVerify the signature\n"
+            + HelpExampleCli("z_verifymessage", "\"zs1...\" \"signature\" \"my message\"") +
+            "\nAs json rpc\n"
+            + HelpExampleRpc("z_verifymessage", "\"zs1...\", \"signature\", \"my message\"")
+        );
+
+    LOCK(cs_main);
+
+    string strAddress  = params[0].get_str();
+    string strSign     = params[1].get_str();
+    string strMessage  = params[2].get_str();
+
+    CTxDestination destination = DecodeDestination(strAddress);
+    if (!IsValidDestination(destination)) {
+        throw JSONRPCError(RPC_TYPE_ERROR, "Invalid address");
+    }
+
+    uint32_t branchId = CurrentEpochBranchId(chainActive.Height(), Params().GetConsensus());
+
+    // Is it a valid zaddr in this set of consensus rules?
+    auto res = DecodePaymentAddress(strAddress);
+    if (!IsValidPaymentAddress(res, branchId)) {
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid zaddr!");
+    }
+
+    bool fInvalid = false;
+    vector<unsigned char> vchSig = DecodeBase64(strSign.c_str(), &fInvalid);
+
+    if (fInvalid)
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Malformed base64 encoding");
+
+    CHashWriter ss(SER_GETHASH, 0);
+    ss << strMessageMagic;
+    ss << strMessage;
+
+    //TODO: do the needful
+    //CPubKey pubkey;
+    //if (!pubkey.RecoverCompact(ss.GetHash(), vchSig))
+    //    return false;
+
+    return false;
 }
 
 UniValue verifymessage(const UniValue& params, bool fHelp, const CPubKey& mypk)
@@ -1662,6 +1721,7 @@ static const CRPCCommand commands[] =
     { "util",               "z_validateaddress",      &z_validateaddress,      true  }, /* uses wallet if enabled */
     { "util",               "createmultisig",         &createmultisig,         true  },
     { "util",               "verifymessage",          &verifymessage,          true  },
+    { "util",               "z_verifymessage",        &z_verifymessage,          true  },
 
     /* Not shown in help */
     { "hidden",             "setmocktime",            &setmocktime,            true  },
