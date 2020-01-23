@@ -920,12 +920,6 @@ UniValue z_signmessage(const UniValue& params, bool fHelp, const CPubKey& mypk)
 
     SaplingNoteEntry noteEntry;
 
-    // TODO: get sig data, serialized, encode, return
-    CHashWriter ss(SER_GETHASH, 0);
-    // TODO: different magic?
-    ss << strMessageMagic;
-    ss << strMessage;
-
     auto ctx = librustzcash_sapling_proving_ctx_init();
     // Empty output script.
     uint256 dataToBeSigned;
@@ -953,13 +947,33 @@ UniValue z_signmessage(const UniValue& params, bool fHelp, const CPubKey& mypk)
     uint256 anchor;
     SaplingWitness witness;
     SpendDescriptionInfo spend = SpendDescriptionInfo(expsk, fakenote, anchor, witness);
+
+    // Generate spendAuthSig
     librustzcash_sapling_spend_sig(
         spend.expsk.ask.begin(),
         spend.alpha.begin(),
         dataToBeSigned.begin(),
         shieldedSpend.spendAuthSig.data());
-    //if (!key.SignCompact(ss.GetHash(), vchSig))
-    //    throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Sign failed");
+
+    CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
+    ss << shieldedSpend.witness.path();
+    std::vector<unsigned char> witness(ss.begin(), ss.end());
+    if (!librustzcash_sapling_spend_proof(
+            ctx,
+            spend.expsk.full_viewing_key().ak.begin(),
+            spend.expsk.nsk.begin(),
+            spend.note.d.data(),
+            spend.note.r.begin(),
+            spend.alpha.begin(),
+            spend.note.value(),
+            spend.anchor.begin(),
+            witness.data(),
+            shieldedSpend.cv.begin(),
+            shieldedSpend.rk.begin(),
+            shieldedSpend.zkproof.data())) {
+        librustzcash_sapling_proving_ctx_free(ctx);
+        return obj;
+    }
 
     //TODO: Copy final data to vchSig
     return EncodeBase64(&vchSig[0], vchSig.size());
