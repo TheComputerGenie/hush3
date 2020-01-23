@@ -910,6 +910,13 @@ UniValue z_signmessage(const UniValue& params, bool fHelp, const CPubKey& mypk)
     if (!boost::apply_visitor(HaveSpendingKeyForPaymentAddress(pwalletMain), res)) {
          throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "From address does not belong to this node, zaddr spending key not found.");
     }
+
+    // Create data needed to make a SpendDescription
+    SaplingExpandedSpendingKey expsk;
+    auto sk = boost::get<libzcash::SaplingExtendedSpendingKey>(spendingkey_);
+    expsk = sk.expsk;
+    uint256 ovk = expsk.full_viewing_key().ovk;
+
     // TODO: get sig data, serialized, encode, return
     CHashWriter ss(SER_GETHASH, 0);
     // TODO: different magic?
