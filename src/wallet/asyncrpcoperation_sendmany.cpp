@@ -1159,6 +1159,7 @@ bool AsyncRPCOperation_sendmany::find_unspent_notes() {
     }
 
     // sort in descending order, so big notes appear first
+    //TODO: what are the performance and metadata leakage implications of this?
     std::sort(z_sprout_inputs_.begin(), z_sprout_inputs_.end(),
         [](SendManyInputJSOP i, SendManyInputJSOP j) -> bool {
             return std::get<2>(i) > std::get<2>(j);

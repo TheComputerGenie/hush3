@@ -913,9 +913,12 @@ UniValue z_signmessage(const UniValue& params, bool fHelp, const CPubKey& mypk)
 
     // Create data needed to make a SpendDescription
     SaplingExpandedSpendingKey expsk;
+    SpendingKey spendingkey_ = boost::apply_visitor(GetSpendingKeyForPaymentAddress(pwalletMain), res).get();
     auto sk = boost::get<libzcash::SaplingExtendedSpendingKey>(spendingkey_);
     expsk = sk.expsk;
     uint256 ovk = expsk.full_viewing_key().ovk;
+
+    SaplingNoteEntry noteEntry;
 
     // TODO: get sig data, serialized, encode, return
     CHashWriter ss(SER_GETHASH, 0);
@@ -939,7 +942,10 @@ UniValue z_signmessage(const UniValue& params, bool fHelp, const CPubKey& mypk)
     vector<unsigned char> vchSig;
     //TODO: Actually get sig data
     SpendDescription shieldedSpend;
-    SpendDescriptionInfo spend;
+    SaplingNote fakenote;
+    uint256 anchor;
+    SaplingWitness witness;
+    SpendDescriptionInfo spend = SpendDescriptionInfo(expsk, fakenote, anchor, witness);
     librustzcash_sapling_spend_sig(
         spend.expsk.ask.begin(),
         spend.alpha.begin(),
