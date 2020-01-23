@@ -39,6 +39,7 @@
 #include "script/interpreter.h"
 #include "zcash/zip32.h"
 #include "notaries_staked.h"
+#include "librustzcash.h"
 
 #include "utiltime.h"
 #include "asyncrpcoperation.h"
@@ -915,11 +916,32 @@ UniValue z_signmessage(const UniValue& params, bool fHelp, const CPubKey& mypk)
     ss << strMessageMagic;
     ss << strMessage;
 
+    auto ctx = librustzcash_sapling_proving_ctx_init();
+    // Empty output script.
+    uint256 dataToBeSigned;
+    CScript scriptCode;
+    CMutableTransaction mtx;
+    UniValue obj(UniValue::VOBJ);
+    try {
+        dataToBeSigned = SignatureHash(scriptCode, mtx, NOT_AN_INPUT, SIGHASH_ALL, 0, branchId);
+    } catch (std::logic_error ex) {
+        librustzcash_sapling_proving_ctx_free(ctx);
+        return obj;
+    }
+
     vector<unsigned char> vchSig;
     //TODO: Actually get sig data
+    SpendDescription shieldedSpend;
+    SpendDescriptionInfo spend;
+    librustzcash_sapling_spend_sig(
+        spend.expsk.ask.begin(),
+        spend.alpha.begin(),
+        dataToBeSigned.begin(),
+        shieldedSpend.spendAuthSig.data());
     //if (!key.SignCompact(ss.GetHash(), vchSig))
     //    throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Sign failed");
 
+    //TODO: Copy final data to vchSig
     return EncodeBase64(&vchSig[0], vchSig.size());
 }
 
