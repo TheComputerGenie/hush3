@@ -941,8 +941,15 @@ UniValue z_signmessage(const UniValue& params, bool fHelp, const CPubKey& mypk)
 
     vector<unsigned char> vchSig;
     //TODO: Actually get sig data
+
     SpendDescription shieldedSpend;
-    SaplingNote fakenote;
+    //auto address = sk.default_address();
+    // TODO: can we use the given address directly to avoid edge cases?
+    auto address = sk.DefaultAddress();
+    SaplingNote fakenote(address, 1 * SATOSHIDEN);
+    SaplingMerkleTree tree;
+    auto maybe_cm = fakenote.cm();
+    tree.append(maybe_cm.get());
     uint256 anchor;
     SaplingWitness witness;
     SpendDescriptionInfo spend = SpendDescriptionInfo(expsk, fakenote, anchor, witness);
