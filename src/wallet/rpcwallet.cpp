@@ -945,8 +945,8 @@ UniValue z_signmessage(const UniValue& params, bool fHelp, const CPubKey& mypk)
     auto maybe_cm = fakenote.cm();
     tree.append(maybe_cm.get());
     uint256 anchor;
-    SaplingWitness witness;
-    SpendDescriptionInfo spend = SpendDescriptionInfo(expsk, fakenote, anchor, witness);
+    //SaplingWitness witness;
+    SpendDescriptionInfo spend = SpendDescriptionInfo(expsk, fakenote, anchor, tree.witness());
 
     // Generate spendAuthSig
     librustzcash_sapling_spend_sig(
@@ -956,8 +956,10 @@ UniValue z_signmessage(const UniValue& params, bool fHelp, const CPubKey& mypk)
         shieldedSpend.spendAuthSig.data());
 
     CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
-    ss << shieldedSpend.witness.path();
+    ss << tree.witness().path();
+    //ss << spend.witness().path();
     std::vector<unsigned char> witness(ss.begin(), ss.end());
+
     if (!librustzcash_sapling_spend_proof(
             ctx,
             spend.expsk.full_viewing_key().ak.begin(),
@@ -967,13 +969,18 @@ UniValue z_signmessage(const UniValue& params, bool fHelp, const CPubKey& mypk)
             spend.alpha.begin(),
             spend.note.value(),
             spend.anchor.begin(),
-            witness.data(),
+            witness.data(), // const unsigned char *witness
             shieldedSpend.cv.begin(),
             shieldedSpend.rk.begin(),
             shieldedSpend.zkproof.data())) {
         librustzcash_sapling_proving_ctx_free(ctx);
         return obj;
     }
+
+    char str[64];
+    auto nullifier = shieldedSpend.nullifier;
+    fprintf(stderr,"%s: zkproof=%s\n", __FUNCTION__, HexStr(shieldedSpend.zkproof.begin(), shieldedSpend.zkproof.end()).c_str());
+    fprintf(stderr,"%s: nf=%s\n", __FUNCTION__, uint256_str(str,nullifier) );
 
     //TODO: Copy final data to vchSig
     return EncodeBase64(&vchSig[0], vchSig.size());
@@ -3865,7 +3872,7 @@ UniValue z_listnullifiers(const UniValue& params, bool fHelp, const CPubKey& myp
             "\nReturns the list of Sapling nullifiers.\n"
             "\nResult:\n"
             "[                     (json array of string)\n"
-            "  \"nullifier\"       (string) a Sapling nullifer\n"
+            "  \"nullifier\"       (string) a Sapling nullifier\n"
             "  ,...\n"
             "]\n"
             "\nExamples:\n"
