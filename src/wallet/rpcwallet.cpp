@@ -921,16 +921,17 @@ UniValue z_signmessage(const UniValue& params, bool fHelp, const CPubKey& mypk)
     SaplingNoteEntry noteEntry;
 
     auto ctx = librustzcash_sapling_proving_ctx_init();
+    fprintf(stderr,"%s: Created sapling proving context\n", __func__);
     // Empty output script.
     uint256 dataToBeSigned;
     CScript scriptCode;
     CMutableTransaction mtx;
-    UniValue obj(UniValue::VOBJ);
+    UniValue obj(UniValue::VSTR);
     try {
         dataToBeSigned = SignatureHash(scriptCode, mtx, NOT_AN_INPUT, SIGHASH_ALL, 0, branchId);
     } catch (std::logic_error ex) {
         librustzcash_sapling_proving_ctx_free(ctx);
-        return obj;
+        throw JSONRPCError(RPC_MISC_ERROR, "SignatureHash exception");
     }
 
     vector<unsigned char> vchSig;
@@ -940,6 +941,8 @@ UniValue z_signmessage(const UniValue& params, bool fHelp, const CPubKey& mypk)
     //auto address = sk.default_address();
     // TODO: can we use the given address directly to avoid edge cases?
     auto address = sk.DefaultAddress();
+
+    // Create a zutxo with amount=1sat
     SaplingNote fakenote(address, 1 * SATOSHIDEN);
     SaplingMerkleTree tree;
     auto maybe_cm = fakenote.cm();
@@ -947,18 +950,28 @@ UniValue z_signmessage(const UniValue& params, bool fHelp, const CPubKey& mypk)
     uint256 anchor;
     //SaplingWitness witness;
     SpendDescriptionInfo spend = SpendDescriptionInfo(expsk, fakenote, anchor, tree.witness());
+    fprintf(stderr,"%s: Created SpendDescriptionInfo\n", __func__);
 
     // Generate spendAuthSig
-    librustzcash_sapling_spend_sig(
+    bool spendResult = librustzcash_sapling_spend_sig(
         spend.expsk.ask.begin(),
         spend.alpha.begin(),
         dataToBeSigned.begin(),
         shieldedSpend.spendAuthSig.data());
 
+    if (!spendResult) {
+        fprintf(stderr,"%s: librustzcash_sapling_spend_sig() returned false!\n", __func__);
+        librustzcash_sapling_proving_ctx_free(ctx);
+        throw JSONRPCError(RPC_MISC_ERROR, "Unable to make sapling spend authsig!");
+    }
+
+    fprintf(stderr,"%s: spendAuthSig=%s\n", __func__, HexStr(shieldedSpend.spendAuthSig.begin(), shieldedSpend.spendAuthSig.end()).c_str() );
+
     CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
     ss << tree.witness().path();
     //ss << spend.witness().path();
     std::vector<unsigned char> witness(ss.begin(), ss.end());
+    fprintf(stderr,"%s: Created witness\n", __func__);
 
     if (!librustzcash_sapling_spend_proof(
             ctx,
@@ -974,7 +987,8 @@ UniValue z_signmessage(const UniValue& params, bool fHelp, const CPubKey& mypk)
             shieldedSpend.rk.begin(),
             shieldedSpend.zkproof.data())) {
         librustzcash_sapling_proving_ctx_free(ctx);
-        return obj;
+        fprintf(stderr,"%s: librustzcash_sapling_spend_proof() returned false!\n", __func__);
+        throw JSONRPCError(RPC_MISC_ERROR, "Unable to make sapling spend proof!");
     }
 
     char str[64];
