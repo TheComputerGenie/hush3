@@ -947,8 +947,10 @@ UniValue z_signmessage(const UniValue& params, bool fHelp, const CPubKey& mypk)
     SaplingMerkleTree tree;
     auto maybe_cm = fakenote.cm();
     tree.append(maybe_cm.get());
-    uint256 anchor;
+    //uint256 anchor;
+    auto anchor = tree.root();
     //SaplingWitness witness;
+
     SpendDescriptionInfo spend = SpendDescriptionInfo(expsk, fakenote, anchor, tree.witness());
     fprintf(stderr,"%s: Created SpendDescriptionInfo\n", __func__);
 
@@ -981,10 +983,9 @@ UniValue z_signmessage(const UniValue& params, bool fHelp, const CPubKey& mypk)
             ctx,
             spend.expsk.full_viewing_key().ak.begin(),
             spend.expsk.nsk.begin(),
-            spend.note.d.data(),
-            spend.note.r.begin(),
-            //spend.alpha.begin(),
-            alpha.begin(),
+            fakenote.d.data(),
+            fakenote.r.begin(),
+            alpha.begin(), //spend.alpha.begin(),
             spend.note.value(),
             spend.anchor.begin(),
             witness.data(), // const unsigned char *witness
@@ -1002,6 +1003,7 @@ UniValue z_signmessage(const UniValue& params, bool fHelp, const CPubKey& mypk)
 
     fprintf(stderr,"%s: zkproof=%s\n", __FUNCTION__, HexStr(shieldedSpend.zkproof.begin(), shieldedSpend.zkproof.end()).c_str());
     fprintf(stderr,"%s: nf=%s\n", __FUNCTION__, uint256_str(str,nullifier) );
+    //fprintf(stderr,"%s: rk=%s\n", __FUNCTION__, uint256_str(str,shieldedSpend.rk) );
 
     //TODO: Copy final data to vchSig
     return EncodeBase64(&vchSig[0], vchSig.size());
