@@ -973,11 +973,15 @@ UniValue z_signmessage(const UniValue& params, bool fHelp, const CPubKey& mypk)
     ss << tree.witness().path();
     //ss << spend.witness().path();
     std::vector<unsigned char> witness(ss.begin(), ss.end());
-    fprintf(stderr,"%s: witness=%s\n", __func__, string((const char*)witness.data()).c_str());
+    //fprintf(stderr,"%s: witness=%s\n", __func__, string((const char*)witness.data()).c_str());
+    //fprintf(stderr,"%s: Created witness data of size=%d and position=%d\n", __func__, witness.size(), witness.position());
+    fprintf(stderr,"%s: Created witness data of size=%d\n", __func__, (int)witness.size());
 
     uint256 alpha;
     librustzcash_sapling_generate_r(alpha.begin());
     fprintf(stderr,"%s: alpha=%s\n", __func__, alpha.GetHex().c_str());
+
+    auto nf = fakenote.nullifier(spend.expsk.full_viewing_key(), tree.witness().position());
 
     if (!librustzcash_sapling_spend_proof(
             ctx,
@@ -998,12 +1002,11 @@ UniValue z_signmessage(const UniValue& params, bool fHelp, const CPubKey& mypk)
     }
 
     char str[64];
-    auto nullifier = shieldedSpend.nullifier;
     //anchor    = spend.anchor;
 
     fprintf(stderr,"%s: zkproof=%s\n", __FUNCTION__, HexStr(shieldedSpend.zkproof.begin(), shieldedSpend.zkproof.end()).c_str());
-    fprintf(stderr,"%s: nf=%s\n", __FUNCTION__, uint256_str(str,nullifier) );
-    //fprintf(stderr,"%s: rk=%s\n", __FUNCTION__, uint256_str(str,shieldedSpend.rk) );
+    fprintf(stderr,"%s: nf=%s\n", __FUNCTION__, uint256_str(str,nf.get()) );
+    fprintf(stderr,"%s: rk=%s\n", __FUNCTION__, uint256_str(str,shieldedSpend.rk) );
 
     //TODO: Copy final data to vchSig
     return EncodeBase64(&vchSig[0], vchSig.size());
