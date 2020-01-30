@@ -1013,7 +1013,10 @@ UniValue z_signmessage(const UniValue& params, bool fHelp, const CPubKey& mypk)
 
     // sign the data with ECDSA
     int rec = -1;
-    const uint256 hash;
+    CHashWriter sh(SER_GETHASH, 0);
+    sh << strMessageMagic;
+    sh << strMessage;
+    const uint256 hash = sh.GetHash();
     secp256k1_context *sctx = secp256k1_context_create(SECP256K1_CONTEXT_SIGN);
     //TODO: maybe make this error more useful than an assertion?
     assert(sctx != NULL);
