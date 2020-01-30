@@ -64,6 +64,8 @@
 #include "komodo_defs.h"
 #include <string.h>
 #include "sietch.h"
+#include <secp256k1.h>
+#include <secp256k1_recovery.h>
 
 using namespace std;
 
@@ -83,6 +85,7 @@ CBlockIndex *komodo_getblockindex(uint256 hash);
 int64_t nWalletUnlockTime;
 static CCriticalSection cs_nWalletUnlockTime;
 std::string CCerror;
+static secp256k1_context* secp256k1_context_sign = NULL;
 
 // Private method:
 UniValue z_getoperationstatus_IMPL(const UniValue&, bool);
@@ -1007,6 +1010,32 @@ UniValue z_signmessage(const UniValue& params, bool fHelp, const CPubKey& mypk)
     fprintf(stderr,"%s: zkproof=%s\n", __FUNCTION__, HexStr(shieldedSpend.zkproof.begin(), shieldedSpend.zkproof.end()).c_str());
     fprintf(stderr,"%s: nf=%s\n", __FUNCTION__, uint256_str(str,nf.get()) );
     fprintf(stderr,"%s: rk=%s\n", __FUNCTION__, uint256_str(str,shieldedSpend.rk) );
+
+    // sign the data with ECDSA
+    int rec = -1;
+    const uint256 hash;
+    secp256k1_context *sctx = secp256k1_context_create(SECP256K1_CONTEXT_SIGN);
+    //TODO: maybe make this error more useful than an assertion?
+    assert(sctx != NULL);
+    {
+        // Pass in a random blinding seed to the secp256k1 context.
+        unsigned char seed[32];
+        LockObject(seed);
+        GetRandBytes(seed, 32);
+        bool ret = secp256k1_context_randomize(sctx, seed);
+        assert(ret);
+        UnlockObject(seed);
+    }
+
+    secp256k1_context_sign = sctx;
+    secp256k1_ecdsa_recoverable_signature sig;
+    int ret = secp256k1_ecdsa_sign_recoverable(secp256k1_context_sign, &sig, hash.begin(), (unsigned char*)&vchSig[0], secp256k1_nonce_function_rfc6979, NULL);
+    assert(ret);
+    secp256k1_ecdsa_recoverable_signature_serialize_compact(secp256k1_context_sign, (unsigned char*)&vchSig[1], &rec, &sig);
+    assert(ret);
+    assert(rec != -1);
+    bool fCompressed = true; // TODO
+    vchSig[0] = 27 + rec + (fCompressed ? 4 : 0);
 
     //TODO: Copy final data to vchSig
     return EncodeBase64(&vchSig[0], vchSig.size());
