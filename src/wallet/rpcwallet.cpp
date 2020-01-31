@@ -1030,7 +1030,16 @@ UniValue z_signmessage(const UniValue& params, bool fHelp, const CPubKey& mypk)
     }
 
     vector<unsigned char> vchSig;
+
+    // This defines our serialization format, should we include mainnet/testnet/regtest ?
+    stringstream zsig;
+    zsig << std::string( std::begin(nf.get()), std::end(nf.get()) );
+    zsig << std::string( std::begin(shieldedSpend.rk), std::end(shieldedSpend.rk));
+    zsig << std::string( std::begin(shieldedSpend.zkproof), std::end(shieldedSpend.zkproof));
+    zsig << std::string( std::begin(shieldedSpend.spendAuthSig), std::end(shieldedSpend.spendAuthSig));
+
     unsigned char vch[32];
+    /*
     vchSig.resize(CPubKey::COMPACT_SIGNATURE_SIZE);
     secp256k1_context_sign = sctx;
     secp256k1_ecdsa_recoverable_signature sig;
@@ -1042,9 +1051,9 @@ UniValue z_signmessage(const UniValue& params, bool fHelp, const CPubKey& mypk)
     assert(rec != -1);
     bool fCompressed = true; // TODO
     vchSig[0] = 27 + rec + (fCompressed ? 4 : 0);
+    */
 
-    //TODO: Copy final data to vchSig
-    return EncodeBase64(&vchSig[0], vchSig.size());
+    return EncodeBase64(zsig.str());
 }
 
 UniValue signmessage(const UniValue& params, bool fHelp, const CPubKey& mypk)
