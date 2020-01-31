@@ -807,15 +807,9 @@ UniValue z_verifymessage(const UniValue& params, bool fHelp, const CPubKey& mypk
     string strSign     = params[1].get_str();
     string strMessage  = params[2].get_str();
 
-    CTxDestination destination = DecodeDestination(strAddress);
-    if (!IsValidDestination(destination)) {
-        throw JSONRPCError(RPC_TYPE_ERROR, "Invalid address");
-    }
-
-    uint32_t branchId = CurrentEpochBranchId(chainActive.Height(), Params().GetConsensus());
-
     // Is it a valid zaddr in this set of consensus rules?
     auto res = DecodePaymentAddress(strAddress);
+    uint32_t branchId = CurrentEpochBranchId(chainActive.Height(), Params().GetConsensus());
     if (!IsValidPaymentAddress(res, branchId)) {
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid zaddr!");
     }
