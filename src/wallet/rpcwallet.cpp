@@ -937,7 +937,6 @@ UniValue z_signmessage(const UniValue& params, bool fHelp, const CPubKey& mypk)
         throw JSONRPCError(RPC_MISC_ERROR, "SignatureHash exception");
     }
 
-    vector<unsigned char> vchSig;
     //TODO: Actually get sig data
 
     SpendDescription shieldedSpend;
@@ -1030,9 +1029,13 @@ UniValue z_signmessage(const UniValue& params, bool fHelp, const CPubKey& mypk)
         UnlockObject(seed);
     }
 
+    vector<unsigned char> vchSig;
+    unsigned char vch[32];
+    vchSig.resize(CPubKey::COMPACT_SIGNATURE_SIZE);
     secp256k1_context_sign = sctx;
     secp256k1_ecdsa_recoverable_signature sig;
-    int ret = secp256k1_ecdsa_sign_recoverable(secp256k1_context_sign, &sig, hash.begin(), (unsigned char*)&vchSig[0], secp256k1_nonce_function_rfc6979, NULL);
+
+    int ret = secp256k1_ecdsa_sign_recoverable(secp256k1_context_sign, &sig, hash.begin(), (unsigned char*)&vch[0], secp256k1_nonce_function_rfc6979, NULL);
     assert(ret);
     secp256k1_ecdsa_recoverable_signature_serialize_compact(secp256k1_context_sign, (unsigned char*)&vchSig[1], &rec, &sig);
     assert(ret);
