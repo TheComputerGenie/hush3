@@ -64,8 +64,6 @@
 #include "komodo_defs.h"
 #include <string.h>
 #include "sietch.h"
-#include <secp256k1.h>
-#include <secp256k1_recovery.h>
 
 using namespace std;
 
@@ -85,7 +83,6 @@ CBlockIndex *komodo_getblockindex(uint256 hash);
 int64_t nWalletUnlockTime;
 static CCriticalSection cs_nWalletUnlockTime;
 std::string CCerror;
-static secp256k1_context* secp256k1_context_sign = NULL;
 
 // Private method:
 UniValue z_getoperationstatus_IMPL(const UniValue&, bool);
@@ -1004,32 +1001,10 @@ UniValue z_signmessage(const UniValue& params, bool fHelp, const CPubKey& mypk)
     }
 
     char str[64];
-    //anchor    = spend.anchor;
 
     fprintf(stderr,"%s: zkproof=%s\n", __FUNCTION__, HexStr(shieldedSpend.zkproof.begin(), shieldedSpend.zkproof.end()).c_str());
     fprintf(stderr,"%s: nf=%s\n", __FUNCTION__, uint256_str(str,nf.get()) );
     fprintf(stderr,"%s: rk=%s\n", __FUNCTION__, uint256_str(str,shieldedSpend.rk) );
-
-    // sign the data with ECDSA
-    int rec = -1;
-    CHashWriter sh(SER_GETHASH, 0);
-    sh << strMessageMagic;
-    sh << strMessage;
-    const uint256 hash = sh.GetHash();
-    secp256k1_context *sctx = secp256k1_context_create(SECP256K1_CONTEXT_SIGN);
-    //TODO: maybe make this error more useful than an assertion?
-    assert(sctx != NULL);
-    {
-        // Pass in a random blinding seed to the secp256k1 context.
-        unsigned char seed[32];
-        LockObject(seed);
-        GetRandBytes(seed, 32);
-        bool ret = secp256k1_context_randomize(sctx, seed);
-        assert(ret);
-        UnlockObject(seed);
-    }
-
-    vector<unsigned char> vchSig;
 
     // This defines our serialization format, should we include mainnet/testnet/regtest ?
     stringstream zsig;
@@ -1037,21 +1012,6 @@ UniValue z_signmessage(const UniValue& params, bool fHelp, const CPubKey& mypk)
     zsig << std::string( std::begin(shieldedSpend.rk), std::end(shieldedSpend.rk));
     zsig << std::string( std::begin(shieldedSpend.zkproof), std::end(shieldedSpend.zkproof));
     zsig << std::string( std::begin(shieldedSpend.spendAuthSig), std::end(shieldedSpend.spendAuthSig));
-
-    unsigned char vch[32];
-    /*
-    vchSig.resize(CPubKey::COMPACT_SIGNATURE_SIZE);
-    secp256k1_context_sign = sctx;
-    secp256k1_ecdsa_recoverable_signature sig;
-
-    int ret = secp256k1_ecdsa_sign_recoverable(secp256k1_context_sign, &sig, hash.begin(), (unsigned char*)&vch[0], secp256k1_nonce_function_rfc6979, NULL);
-    assert(ret);
-    secp256k1_ecdsa_recoverable_signature_serialize_compact(secp256k1_context_sign, (unsigned char*)&vchSig[1], &rec, &sig);
-    assert(ret);
-    assert(rec != -1);
-    bool fCompressed = true; // TODO
-    vchSig[0] = 27 + rec + (fCompressed ? 4 : 0);
-    */
 
     return EncodeBase64(zsig.str());
 }
