@@ -807,6 +807,9 @@ UniValue z_verifymessage(const UniValue& params, bool fHelp, const CPubKey& mypk
     string strSign     = params[1].get_str();
     string strMessage  = params[2].get_str();
 
+    fprintf(stderr,"%s: base64  data of size %d\n", __func__, (int)strSign.size());
+    fprintf(stderr,"%s: message data of size %d\n", __func__, (int)strMessage.size());
+
     // Is it a valid zaddr in this set of consensus rules?
     auto res = DecodePaymentAddress(strAddress);
     uint32_t branchId = CurrentEpochBranchId(chainActive.Height(), Params().GetConsensus());
@@ -819,17 +822,31 @@ UniValue z_verifymessage(const UniValue& params, bool fHelp, const CPubKey& mypk
 
     if (fInvalid)
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Malformed base64 encoding");
+    fprintf(stderr,"%s: Valid base64, decoded size %d\n", __func__, (int)vchSig.size());
 
-    CHashWriter ss(SER_GETHASH, 0);
-    ss << strMessageMagic;
-    ss << strMessage;
+    bool validSig = false;
+    int zSigSize  = 320;
+    if (vchSig.size() == zSigSize) {
+        //TODO: parse out nf, rk, zkproof, spendAuthSig from vchSig
+        stringstream ss;
+        char str[64];
+        uint256 nf, rk;
+        //spend_auth_sig_t spendAuthSig;
+        //librustzcash::GrothProof zkproof;
+        //ss >> nf;
+        char *buffer = new char[64];
+        ss.read(buffer, 64);
+        string nullifier(buffer);
+        fprintf(stderr,"%s: buffer=%s\n", __func__, HexStr(nullifier.begin(), nullifier.end()).c_str());
+        nf.SetHex(buffer);
+        fprintf(stderr,"%s: nf=%s\n", __func__, uint256_str(str,nf) );
+        // ss >> rk;
+    } else {
+        fprintf(stderr,"%s: invalid signature size!  %d\n", __func__, (int)vchSig.size());
+    }
 
-    //TODO: do the needful
-    //CPubKey pubkey;
-    //if (!pubkey.RecoverCompact(ss.GetHash(), vchSig))
-    //    return false;
 
-    return false;
+    return validSig;
 }
 
 UniValue verifymessage(const UniValue& params, bool fHelp, const CPubKey& mypk)
