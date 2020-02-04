@@ -833,12 +833,18 @@ UniValue z_verifymessage(const UniValue& params, bool fHelp, const CPubKey& mypk
         uint256 nf, rk;
         //spend_auth_sig_t spendAuthSig;
         //librustzcash::GrothProof zkproof;
-        //ss >> nf;
+        string nullif;
+        ss >> nullif;
         char *buffer = new char[64];
-        ss.read(buffer, 64);
-        string nullifier(buffer);
-        fprintf(stderr,"%s: buffer=%s\n", __func__, HexStr(nullifier.begin(), nullifier.end()).c_str());
-        nf.SetHex(buffer);
+        string s1;
+        std::streamsize ssize = 64;
+        ss.read(buffer, ssize);
+        fprintf(stderr,"%s: buffer=%s\n", __func__, HexStr(string(buffer)).c_str());
+        //string nullifier(buffer);
+        //fprintf(stderr,"%s: buffer=%s\n", __func__, HexStr(nullifier.begin(), nullifier.end()).c_str());
+        //nf.SetHex(buffer);
+        //fprintf(stderr,"%s: nf=%s\n", __func__, uint256_str(str,nf) );
+        nf.SetHex(s1);
         fprintf(stderr,"%s: nf=%s\n", __func__, uint256_str(str,nf) );
         // ss >> rk;
     } else {
