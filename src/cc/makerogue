@@ -1,4 +1,6 @@
 #!/bin/sh
+# Copyright (c) 2019-2020 The Hush developers
+
 cd rogue;
 make clean;
 
@@ -19,7 +21,7 @@ if [ "$HOST" = "x86_64-w64-mingw32" ]; then
   fi
 else
   echo building rogue...
-  ./configure
+  ./configure --build=aarch64-unknown-linux-gnu
   if make "$@"; then
     echo rogue build SUCCESSFUL
     cd ..
