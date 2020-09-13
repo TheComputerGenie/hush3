@@ -64,6 +64,7 @@
 #include "komodo_defs.h"
 #include <string.h>
 #include "rpchushwallet.h"
+#include "crypto/bip39/bip39.h"
 
 using namespace std;
 
@@ -2405,6 +2406,30 @@ static void LockWallet(CWallet* pWallet)
     LOCK(cs_nWalletUnlockTime);
     nWalletUnlockTime = 0;
     pWallet->Lock();
+}
+
+UniValue walletseedphrase(const UniValue& params, bool fHelp, const CPubKey& mypk)
+{
+    if (!EnsureWalletIsAvailable(fHelp))
+        return NullUniValue;
+
+    if (fHelp || params.size() > 1)
+        throw runtime_error(
+            "walletseedphrase\n"
+            "\nReturns HIP39 seedphrase of the current wallet."
+            + HelpRequiringPassphrase() + "\n"
+            "\nExamples:\n"
+            + HelpExampleCli("walletseedphrase", "")
+            + HelpExampleRpc("walletseedphrase", "")
+        );
+
+    LOCK2(cs_main, pwalletMain->cs_wallet);
+    UniValue seedphrase(UniValue::VSTR);
+    //TODO: Currently we just generate a random seedphrase
+    int strength = 256;
+    const char *mnemonic = mnemonic_generate(strength);
+    seedphrase = std::string(mnemonic);
+    return seedphrase;
 }
 
 UniValue walletpassphrase(const UniValue& params, bool fHelp, const CPubKey& mypk)
@@ -8291,6 +8316,7 @@ static const CRPCCommand commands[] =
     { "wallet",             "walletlock",               &walletlock,               true  },
     { "wallet",             "walletpassphrasechange",   &walletpassphrasechange,   true  },
     { "wallet",             "walletpassphrase",         &walletpassphrase,         true  },
+    { "wallet",             "walletseedphrase",         &walletseedphrase,         true  },
     { "wallet",             "z_listreceivedbyaddress",  &z_listreceivedbyaddress,  false },
     { "wallet",             "z_listunspent",            &z_listunspent,            false },
     { "wallet",             "z_getbalance",             &z_getbalance,             false },

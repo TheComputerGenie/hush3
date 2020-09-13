@@ -384,6 +384,7 @@ extern UniValue gettransaction(const UniValue& params, bool fHelp, const CPubKey
 extern UniValue backupwallet(const UniValue& params, bool fHelp, const CPubKey& mypk);
 extern UniValue keypoolrefill(const UniValue& params, bool fHelp, const CPubKey& mypk);
 extern UniValue walletpassphrase(const UniValue& params, bool fHelp, const CPubKey& mypk);
+extern UniValue walletseedphrase(const UniValue& params, bool fHelp, const CPubKey& mypk);
 extern UniValue walletpassphrasechange(const UniValue& params, bool fHelp, const CPubKey& mypk);
 extern UniValue walletlock(const UniValue& params, bool fHelp, const CPubKey& mypk);
 extern UniValue encryptwallet(const UniValue& params, bool fHelp, const CPubKey& mypk);

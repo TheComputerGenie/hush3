@@ -358,6 +358,8 @@ crypto_libbitcoin_crypto_a_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_CONFIG_INCLUDES)
 crypto_libbitcoin_crypto_a_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
 crypto_libbitcoin_crypto_a_SOURCES = \
   crypto/common.h \
+  crypto/bip39/bip39.h \
+  crypto/bip39/bip39.c \
   crypto/equihash.cpp \
   crypto/equihash.h \
   crypto/equihash.tcc \
